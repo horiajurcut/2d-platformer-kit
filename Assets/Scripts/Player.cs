@@ -1,6 +1,6 @@
 using UnityEngine;
 
-[RequireComponent(typeof(Controller2D))]
+[RequireComponent(typeof(CharacterController2D))]
 public class Player : MonoBehaviour
 {
     public float moveSpeed = 6f;
@@ -17,11 +17,11 @@ public class Player : MonoBehaviour
     
     private Vector3 _velocity;
 
-    private Controller2D _controller2D;
+    private CharacterController2D _characterController2D;
 
     private void Start()
     {
-        _controller2D = GetComponent<Controller2D>();
+        _characterController2D = GetComponent<CharacterController2D>();
         
         ComputeEquationsOfMotion();
     }
@@ -46,24 +46,24 @@ public class Player : MonoBehaviour
 
     private void Update()
     {
-        if (_controller2D.Collisions.Above || _controller2D.Collisions.Below)
+        if (_characterController2D.Collisions.Above || _characterController2D.Collisions.Below)
         {
             _velocity.y = 0f;
         }
         
         // TODO: Replace with new Input System
         var input = new Vector2(Input.GetAxisRaw("Horizontal"), Input.GetAxisRaw("Vertical"));
-        if (Input.GetKeyDown(KeyCode.Space) && _controller2D.Collisions.Below)
+        if (Input.GetKeyDown(KeyCode.Space) && _characterController2D.Collisions.Below)
         {
             _velocity.y = _jumpVelocity;
         }
 
         var targetVelocityX = input.x * moveSpeed;
-        var smoothTime = _controller2D.Collisions.Below ? accelerationTimeGrounded : accelerationTimeAirborne;
+        var smoothTime = _characterController2D.Collisions.Below ? accelerationTimeGrounded : accelerationTimeAirborne;
         
         _velocity.x = Mathf.SmoothDamp(_velocity.x, targetVelocityX, ref _velocityXSmoothing, smoothTime);
         _velocity.y += _gravity * Time.deltaTime;
         
-        _controller2D.Move(_velocity * Time.deltaTime);
+        _characterController2D.Move(_velocity * Time.deltaTime);
     }
 }

@@ -1,34 +1,11 @@
-using System;
 using UnityEngine;
 
-[RequireComponent(typeof(BoxCollider2D))]
-public class Controller2D : MonoBehaviour
+public class CharacterController2D : RaycastController
 {
-    public int horizontalRayCount = 4;
-    public int verticalRayCount = 4;
-
-    public LayerMask collisionMask;
     public CollisionInfo Collisions;
 
     public float maxAscentAngle = 80f;
     public float maxDescentAngle = 75f;
-
-    private const float SkinWidth = .015f;
-
-    private float _horizontalRaySpacing;
-    private float _verticalRaySpacing;
-
-    private BoxCollider2D _boxCollider2D;
-    private RaycastOrigins _raycastOrigins;
-
-    private const float Tolerance = 0.00001f;
-
-    private void Start()
-    {
-        _boxCollider2D = GetComponent<BoxCollider2D>();
-
-        CalculateRaySpacing();
-    }
 
     private void VerticalCollisions(ref Vector3 velocity)
     {
@@ -37,10 +14,10 @@ public class Controller2D : MonoBehaviour
 
         for (var i = 0; i < verticalRayCount; i++)
         {
-            var rayOrigin = Math.Abs(directionY - (-1f)) < Tolerance
-                ? _raycastOrigins.BottomLeft
-                : _raycastOrigins.TopLeft;
-            rayOrigin += Vector2.right * (_verticalRaySpacing * i + velocity.x);
+            var rayOrigin = Mathf.Approximately(directionY, -1f)
+                ? RayOrigins.BottomLeft
+                : RayOrigins.TopLeft;
+            rayOrigin += Vector2.right * (VerticalRaySpacing * i + velocity.x);
 
             var hit = Physics2D.Raycast(rayOrigin, directionY * Vector2.up, rayLength, collisionMask);
 
@@ -55,9 +32,9 @@ public class Controller2D : MonoBehaviour
                 {
                     velocity.x = velocity.y / Mathf.Tan(Collisions.SlopeAngle * Mathf.Deg2Rad) * Mathf.Sign(velocity.x);
                 }
-
-                Collisions.Below = Math.Abs(directionY - (-1f)) < Tolerance;
-                Collisions.Above = Math.Abs(directionY - 1f) < Tolerance;
+                
+                Collisions.Below = Mathf.Approximately(directionY, -1f);
+                Collisions.Above = Mathf.Approximately(directionY, 1f);
             }
         }
 
@@ -66,9 +43,9 @@ public class Controller2D : MonoBehaviour
             var directionX = Mathf.Sign(velocity.x);
             rayLength = Mathf.Abs(velocity.x) + SkinWidth;
 
-            var rayOrigin = (Math.Abs(directionX - (-1)) < Tolerance
-                ? _raycastOrigins.BottomLeft
-                : _raycastOrigins.BottomRight) + Vector2.up * velocity.y;
+            var rayOrigin = (Mathf.Approximately(directionX, -1f)
+                ? RayOrigins.BottomLeft
+                : RayOrigins.BottomRight) + Vector2.up * velocity.y;
 
             var hit = Physics2D.Raycast(rayOrigin, Vector2.right * directionX, rayLength, collisionMask);
 
@@ -76,7 +53,7 @@ public class Controller2D : MonoBehaviour
             {
                 var slopeAngle = Vector2.Angle(hit.normal, Vector2.up);
 
-                if (Math.Abs(slopeAngle - Collisions.SlopeAngle) > Tolerance)
+                if (!Mathf.Approximately(slopeAngle, Collisions.SlopeAngle))
                 {
                     velocity.x = (hit.distance - SkinWidth) * directionX;
                     Collisions.SlopeAngle = slopeAngle;
@@ -92,10 +69,10 @@ public class Controller2D : MonoBehaviour
 
         for (var i = 0; i < horizontalRayCount; i++)
         {
-            var rayOrigin = Math.Abs(directionX - (-1f)) < Tolerance
-                ? _raycastOrigins.BottomLeft
-                : _raycastOrigins.BottomRight;
-            rayOrigin += Vector2.up * (_horizontalRaySpacing * i);
+            var rayOrigin = Mathf.Approximately(directionX, -1f)
+                ? RayOrigins.BottomLeft
+                : RayOrigins.BottomRight;
+            rayOrigin += Vector2.up * (HorizontalRaySpacing * i);
 
             var hit = Physics2D.Raycast(rayOrigin, directionX * Vector2.right, rayLength, collisionMask);
 
@@ -115,7 +92,7 @@ public class Controller2D : MonoBehaviour
                     
                     var distanceToSlopeStart = 0f;
 
-                    if (Math.Abs(slopeAngle - Collisions.PrevSlopeAngle) > Tolerance)
+                    if (!Mathf.Approximately(slopeAngle, Collisions.PrevSlopeAngle))
                     {
                         distanceToSlopeStart = hit.distance - SkinWidth;
                         velocity.x -= distanceToSlopeStart * directionX;
@@ -135,8 +112,8 @@ public class Controller2D : MonoBehaviour
                         velocity.y = Mathf.Tan(Collisions.SlopeAngle * Mathf.Deg2Rad) * Mathf.Abs(velocity.x);
                     }
 
-                    Collisions.Left = Math.Abs(directionX - (-1f)) < Tolerance;
-                    Collisions.Right = Math.Abs(directionX - 1f) < Tolerance;
+                    Collisions.Left = Mathf.Approximately(directionX, -1f);
+                    Collisions.Right = Mathf.Approximately(directionX, 1f);
                 }
             }
         }
@@ -163,9 +140,9 @@ public class Controller2D : MonoBehaviour
     private void DescendSlope(ref Vector3 velocity)
     {
         var directionX = Mathf.Sign(velocity.x);
-        var rayOrigin = Math.Abs(directionX - (-1)) < Tolerance
-            ? _raycastOrigins.BottomRight
-            : _raycastOrigins.BottomLeft;
+        var rayOrigin = Mathf.Approximately(directionX, -1f)
+            ? RayOrigins.BottomRight
+            : RayOrigins.BottomLeft;
 
         var hit = Physics2D.Raycast(rayOrigin, Vector2.down, Mathf.Infinity, collisionMask);
 
@@ -175,7 +152,7 @@ public class Controller2D : MonoBehaviour
 
             if (slopeAngle != 0f && slopeAngle <= maxDescentAngle)
             {
-                if (Math.Abs(Mathf.Sign(hit.normal.x) - directionX) < Tolerance)
+                if (Mathf.Approximately(Mathf.Sign(hit.normal.x), directionX))
                 {
                     if (hit.distance - SkinWidth <= Mathf.Tan(slopeAngle * Mathf.Deg2Rad) * Mathf.Abs(velocity.x))
                     {
@@ -193,35 +170,6 @@ public class Controller2D : MonoBehaviour
                 }
             }
         }
-    }
-
-    private void UpdateRaycastOrigins()
-    {
-        var bounds = _boxCollider2D.bounds;
-        bounds.Expand(SkinWidth * -2);
-
-        _raycastOrigins.BottomLeft = new Vector2(bounds.min.x, bounds.min.y);
-        _raycastOrigins.BottomRight = new Vector2(bounds.max.x, bounds.min.y);
-        _raycastOrigins.TopLeft = new Vector2(bounds.min.x, bounds.max.y);
-        _raycastOrigins.TopRight = new Vector2(bounds.max.x, bounds.max.y);
-    }
-
-    private void CalculateRaySpacing()
-    {
-        var bounds = _boxCollider2D.bounds;
-        bounds.Expand(SkinWidth * -2);
-
-        horizontalRayCount = Mathf.Clamp(horizontalRayCount, 2, int.MaxValue);
-        verticalRayCount = Mathf.Clamp(verticalRayCount, 2, int.MaxValue);
-
-        _horizontalRaySpacing = bounds.size.y / (horizontalRayCount - 1);
-        _verticalRaySpacing = bounds.size.x / (verticalRayCount - 1);
-    }
-
-    private struct RaycastOrigins
-    {
-        public Vector2 TopLeft, TopRight;
-        public Vector2 BottomLeft, BottomRight;
     }
 
     public void Move(Vector3 velocity)
